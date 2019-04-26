@@ -1,0 +1,8 @@
+{
+    "watch_dir": "",
+    "upload_ip": "",
+    "upload_usr": "",
+    "upload_password": "",
+    "upload_dir": "",
+    "delete_after_days": 5
+}
