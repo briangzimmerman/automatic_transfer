@@ -53,4 +53,4 @@ setInterval(() => {
         //remove file
         console.log(config.watch_dir+'/'+row.name);
     });
-}, 86400000); //Every day
+}, 900000); //Every 15 minutes
