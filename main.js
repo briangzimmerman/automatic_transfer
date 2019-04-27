@@ -10,8 +10,14 @@ var db = new sqlite3.Database(':files:');
 
 chokidar.watch(config.watch_dir, {
     ignored: /(^|[\/\\])\../,
-    ignoreInitial: true
-}).on('add', (file) => {
+    ignoreInitial: true,
+    depth: 0,
+    awaitWriteFinish: true
+})
+.on('add', transferFile)
+.on('addDir', transferFile);
+
+function transferFile(file) {
     var basename = path.basename(file);
     var file_stats = fs.statSync(file);
     var mtime = Math.round(new Date(file_stats.mtime).getTime() / 1000);
@@ -57,7 +63,7 @@ chokidar.watch(config.watch_dir, {
             );
         });
     }, 1000);
-});
+}
 
 //Remove old upload files
 setInterval(() => {
