@@ -35,7 +35,9 @@ function transferFile(file) {
         pass: config.upload_password
     })
     .exec(`nc -l -p 6969 | tar -Pzxf - -C '${config.upload_dir}'`)
-    .exec(`ls`)//reset media server
+    .exec(`sudo minidlna -D && sudo service minidlna restart`, {
+        in: config.upload_password+"\n"
+    })//reset media server
     .start();
 
     setTimeout(() => {
