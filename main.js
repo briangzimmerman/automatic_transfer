@@ -59,12 +59,31 @@ chokidar.watch(config.watch_dir, {
     }, 1000);
 });
 
-// setInterval(() => {
-//     var now = Math.round(Date.now() / 1000);
-//     var oldest = now - (config.delete_after_days * 24 * 60 * 60);
+//Remove old upload files
+setInterval(() => {
+    var now = Math.round(Date.now() / 1000);
+    var oldest = now - (config.delete_after_days * 24 * 60 * 60);
 
-//     db.each(`SELECT * FROM file WHERE created < ${oldest}`, (err, row) => {
-//         //remove file
-//         console.log(config.watch_dir+'/'+row.name);
-//     });
-// }, 900000); //Every 15 minutes
+    db.each(`SELECT * FROM file WHERE created < ${oldest}`, (err, row) => {
+        console.log(config.watch_dir+'/'+row.name);
+        db.run("DELETE FROM file WHERE name = ?", [row.name], (err) => {
+            if(err) {
+                notifier.notify({
+                    title: 'Upload Delete Failed',
+                    message: `Could not remove ${row.name} from DB`
+                });
+                
+                return;
+            }
+
+            fs.unlink(config.watch_dir+'/'+row.name, (err) => {
+                if(err) {
+                    notifier.notify({
+                        title: 'Upload Delete Failed',
+                        message: `Could not delete ${row.name}`
+                    });
+                }
+            });
+        });
+    });
+}, 900000); //Every 15 minutes
