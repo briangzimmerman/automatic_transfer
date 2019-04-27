@@ -71,7 +71,7 @@ setInterval(() => {
     var oldest = now - (config.delete_after_days * 24 * 60 * 60);
 
     db.each(`SELECT * FROM file WHERE created < ${oldest}`, (err, row) => {
-        console.log(config.watch_dir+'/'+row.name);
+        console.log('Delete:', config.watch_dir+'/'+row.name);
         db.run("DELETE FROM file WHERE name = ?", [row.name], (err) => {
             if(err) {
                 notifier.notify({
