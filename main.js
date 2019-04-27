@@ -1,5 +1,6 @@
 const config = require('./config.json');
 const chokidar = require('chokidar');
+const notifier = require('node-notifier');
 const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
@@ -14,21 +15,13 @@ chokidar.watch(config.watch_dir, {
     var basename = path.basename(file);
     var file_stats = fs.statSync(file);
     var mtime = Math.round(new Date(file_stats.mtime).getTime() / 1000);
-    var is_new = true;
-
-    db.all(
-        "SELECT * FROM file WHERE name = ? AND created >= ?",
-        [basename, mtime],
-        (err, rows) => { is_new = rows && rows.length; }
-    );
 
     console.log(`Found ${basename}`);
-    if(!is_new) {
-        console.log("It's not new");
-        return;
-    } else {
-        console.log("It's new");
-    }
+
+    notifier.notify({
+        title: 'Automatic Transer',
+        message: `Transfering ${basename} to ${config.upload_ip}...`
+    });
 
     new SSH({
         host: config.upload_ip,
@@ -42,13 +35,21 @@ chokidar.watch(config.watch_dir, {
     setTimeout(() => {
         exec(`tar Pczf - '${basename}' | nc -w1 ${config.upload_ip} 6969`, {
             cwd: config.watch_dir
-        }, (err) => { //upload
+        }, (err) => {
             if(err) {
                 console.log("Could not run command", err);
+                notifier.notify({
+                    title: 'Automatic Transfer Failed',
+                    message: `Could not transfer ${basename} to ${config.upload_ip}`
+                });
                 return;
             }
 
             console.log("Updating db");
+            notifier.notify({
+                title: 'Automatic Transfer Complete',
+                message: `Transfered ${basename} to ${config.upload_ip}`
+            });
     
             db.run(
                 "INSERT OR REPLACE INTO file(name, created) VALUES(?, ?)",
