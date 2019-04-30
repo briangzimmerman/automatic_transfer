@@ -2,11 +2,8 @@ const config = require('./config.json');
 const chokidar = require('chokidar');
 const notifier = require('node-notifier');
 const path = require('path');
-const fs = require('fs');
 const { exec } = require('child_process');
 var SSH = require('simple-ssh');
-var sqlite3 = require('sqlite3').verbose();
-var db = new sqlite3.Database(__dirname + '/:files:');
 
 chokidar.watch(config.watch_dir, {
     ignored: /(^|[\/\\])\../,
@@ -20,8 +17,6 @@ chokidar.watch(config.watch_dir, {
 function transferFile(file) {
     var basename = path.basename(file);
     var trunc_basename = truncate(basename);
-    var file_stats = fs.statSync(file);
-    var mtime = Math.round(new Date(file_stats.mtime).getTime() / 1000);
 
     console.log(`Found ${basename}`);
 
@@ -56,16 +51,11 @@ function transferFile(file) {
                 return;
             }
 
-            console.log("Updating db");
+            console.log("Finished transfering");
             notifier.notify({
                 title: 'Automatic Transfer Complete',
                 message: `Transfered ${trunc_basename} to ${config.upload_ip}`
             });
-    
-            db.run(
-                "INSERT OR REPLACE INTO file(name, created) VALUES(?, ?)",
-                [basename, mtime]
-            );
         });
     }, 1000);
 }
@@ -77,34 +67,3 @@ function truncate(string) {
         return string;
     }
 }
-
-//Remove old upload files
-setInterval(() => {
-    var now = Math.round(Date.now() / 1000);
-    var oldest = now - (config.delete_after_days * 24 * 60 * 60);
-
-    db.each(`SELECT * FROM file WHERE created < ${oldest}`, (err, row) => {
-        console.log('Delete:', config.watch_dir+'/'+row.name);
-        var trunc_basename = truncate(row.name);
-
-        db.run("DELETE FROM file WHERE name = ?", [row.name], (err) => {
-            if(err) {
-                notifier.notify({
-                    title: 'Upload Delete Failed',
-                    message: `Could not remove ${trunc_basename} from DB`
-                });
-                
-                return;
-            }
-
-            fs.unlink(config.watch_dir+'/'+row.name, (err) => {
-                if(err) {
-                    notifier.notify({
-                        title: 'Upload Delete Failed',
-                        message: `Could not delete ${trunc_basename}`
-                    });
-                }
-            });
-        });
-    });
-}, 900000); //Every 15 minutes
